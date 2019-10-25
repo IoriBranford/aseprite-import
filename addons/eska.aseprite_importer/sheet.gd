@@ -227,7 +227,6 @@ func _parse_frame( sheet_frame ):
 	frame.region_rect = Rect2( rect.x, rect.y, rect.w, rect.h )
 	var sourceSize = sheet_frame.sourceSize
 	var anchor_offset = Vector2(sourceSize.w*_anchor.x, sourceSize.h*_anchor.y)
-	print(frame.position, frame.position - anchor_offset)
 	frame.position -= anchor_offset
 	return OK
 

@@ -41,11 +41,15 @@ var _layers = [{}]
 var _layer_indices = null
 var _frames = []
 var _animations = null
+var _anchor = Vector2()
 
 var _error_message = "No error message available"
 
 func _init():
 	_filenameRegex.compile('(?<sprite>[\\w]+)( \\((?<layer>[\\w\\s]+)\\))?( (?<index>\\d+))?')
+
+func set_anchor(anchor):
+	_anchor = anchor
 
 func get_error_message():
 	return _error_message
@@ -221,6 +225,10 @@ func _parse_frame( sheet_frame ):
 	var spriteSourceSize = sheet_frame.spriteSourceSize
 	frame.position = Vector2(spriteSourceSize.x, spriteSourceSize.y)
 	frame.region_rect = Rect2( rect.x, rect.y, rect.w, rect.h )
+	var sourceSize = sheet_frame.sourceSize
+	var anchor_offset = Vector2(sourceSize.w*_anchor.x, sourceSize.h*_anchor.y)
+	print(frame.position, frame.position - anchor_offset)
+	frame.position -= anchor_offset
 	return OK
 
 const DIRECTION_FORWARD = 'forward'
@@ -254,26 +262,26 @@ func _validate_base():
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-
+	
 	if _dict.frames.size() <= 0:
 		_error_message = ERRMSG_MISSING_VALUE_STRF % 'frames'
 		return ERR_INVALID_DATA
-
+	
 	errmsg = _get_value_error( _dict, 'meta', TYPE_DICTIONARY )
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-
+	
 	errmsg = _get_value_error( _dict.meta, 'image', TYPE_STRING )
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-
+	
 	errmsg = _get_value_error( _dict.meta, 'size', TYPE_DICTIONARY )
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-
+	
 	if make_vector2( _dict.meta.size ) == null:
 		_error_message = ERRMSG_INVALID_VALUE_STRF % 'meta.size'
 		return ERR_INVALID_DATA
@@ -302,12 +310,12 @@ func _validate_animation( anim ):
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-
+	
 	errmsg = _get_value_error( anim, 'direction', TYPE_STRING )
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-
+	
 	var direction_is_valid = false
 	for direction in [DIRECTION_FORWARD, DIRECTION_REVERSE, DIRECTION_PINGPONG]:
 		if anim.direction == direction:
@@ -316,7 +324,7 @@ func _validate_animation( anim ):
 	if not direction_is_valid:
 		_error_message = ERRMSG_INVALID_VALUE_STRF % 'direction'
 		return ERR_INVALID_DATA
-
+	
 	errmsg = _get_value_error( anim, 'from', TYPE_REAL )
 	if errmsg:
 		_error_message = errmsg

@@ -94,6 +94,11 @@ func get_import_options(preset):
 			default_value = "",
 			#tooltip = "The name of the animation to autoplay on scene load.",
 		},
+		{
+			name = "anchor",
+			default_value = Vector2(),
+			#tooltip = "(0,0) for top left (1,1) for bottom right",
+		}
 	]
 
 	return options
@@ -104,6 +109,7 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 	target_path = target_path + "." + get_save_extension()
 	var post_script_path = import_options.post_script
 	var autoplay_name = import_options.autoplay_animation
+	var anchor = import_options.anchor
 
 	var file = File.new()
 	var error
@@ -120,6 +126,7 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 		return error
 
 	var sheet = Sheet.new()
+	sheet.set_anchor(anchor)
 	error = sheet.parse_json( file.get_as_text() )
 	file.close()
 	if error != OK:

@@ -46,7 +46,7 @@ var _anchor = Vector2()
 var _error_message = "No error message available"
 
 func _init():
-	_filenameRegex.compile('(?<sprite>[\\w]+)( \\((?<layer>[\\w\\s]+)\\))?( (?<index>\\d+))?')
+	_filenameRegex.compile('(?<sprite>[^ ]+)( \\((?<layer>.+)\\))?( (?<index>\\d+))?')
 
 func set_anchor(anchor):
 	_anchor = anchor

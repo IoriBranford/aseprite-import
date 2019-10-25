@@ -58,6 +58,8 @@ After the first export, the settings dialog may be skipped by using
 per *Edit → Keyboard Shortcuts…*. By default, a single shortcut is configured
 as `Ctrl + Shift + X`.
 
+(As of 10/25/2019 this plugin can handle split-layer spritesheets, where each region is a cel rather than a merged frame. These have the advantages of being more texture-memory-efficient, and able to show/hide individual parts such as a character's various accessories. Currently Aseprite can only export them from the command line. Sample export command: `aseprite -b --trim --shape-padding 1 --sheet-pack --split-layers --list-layers --list-tags --data Queen.json --sheet Queen.png Queen.ase`)
+
 Importing into Godot Engine
 ---------------------------
 
@@ -86,6 +88,8 @@ The `Autoplay Animation` option lets you set the name of an animation to play as
 soon as the scene loads, which is useful since the scene can't be manually edited
 after importing.
 
+The `Anchor` option determines the origin point of the sprite or sprite group. (0,0) is top left, (.5,.5) center, and (1,1) bottom right.
+
 Warning
 =======
 
@@ -108,8 +112,8 @@ To report issues or offer patches for the plug-in, please use the
 [`aseprite-import` Github repository][aseprite-import].
 
 
-[Godot Engine]: https://godotengine.org/ 'Godot Engine website'
+[Godot Engine]: https://godotengine.org/ "Godot Engine website"
 
-[Aseprite]: http://www.aseprite.org/ 'Aseprite website'
+[Aseprite]: http://www.aseprite.org/ "Aseprite website"
 
-[aseprite-import]: https://github.com/eska014/aseprite-import/ 'aseprite-import Github repository'
+[aseprite-import]: https://github.com/eska014/aseprite-import/ "aseprite-import Github repository"

@@ -58,7 +58,11 @@ After the first export, the settings dialog may be skipped by using
 per *Edit → Keyboard Shortcuts…*. By default, a single shortcut is configured
 as `Ctrl + Shift + X`.
 
-(As of 10/25/2019 this plugin can handle split-layer spritesheets, where each region is a cel rather than a merged frame. These have the advantages of being more texture-memory-efficient, and able to show/hide individual parts such as a character's various accessories. Currently Aseprite can only export them from the command line. Sample export command: `aseprite -b --trim --shape-padding 1 --sheet-pack --split-layers --list-layers --list-tags --data Queen.json --sheet Queen.png Queen.ase`)
+### Split Layers
+
+As of 10/25/2019 this plugin can handle split-layer spritesheets exported with the `--split-layers` option. These have the advantage of being able to dynamically show/hide individual parts, for example a character showing only the accessories she is wearing currently. They also tend to be more texture-memory-efficient when combined with the `--trim` and `--sheet-pack` options. Currently Aseprite can only export this type of spritesheet from the command line.
+
+Sample export command: `aseprite -b --trim --shape-padding 1 --sheet-pack --split-layers --list-layers --list-tags --data Queen.json --sheet Queen.png Queen.ase`
 
 Importing into Godot Engine
 ---------------------------

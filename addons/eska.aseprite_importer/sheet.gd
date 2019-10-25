@@ -49,11 +49,11 @@ const ERRMSG_INVALID_JSON =\
 const ERRMSG_MISSING_KEY_STRF =\
 """Missing key "%s" in sheet"""
 const ERRMSG_MISSING_VALUE_STRF =\
-"""Missing value for key "%s\""""
+"""Missing value for key "%s" """
 const ERRMSG_INVALID_KEY_STRF =\
-"""Invalid key: "%s\""""
+"""Invalid key: "%s" """
 const ERRMSG_INVALID_VALUE_STRF =\
-"""Invalid value for key "%s\""""
+"""Invalid value for key "%s" """
 
 func is_loaded():
 	return _loaded

@@ -39,7 +39,7 @@ const ERRMSG_FILE_OPEN_STRF =\
 const ERRMSG_FILE_INVALID_STRF =\
 """File "%s" is not a valid %s file"""
 const ERRMSG_SAVE_STRF =\
-"""Failed to save file "%s\""""
+"""Failed to save file "%s" """
 const ERRMSG_MERGE_PRETEXT_STRF =\
 """Merging sprite sheet scene "%s" failed\n"""
 const WARNMSG_ANIMATION_EXPORT_STRF=\
@@ -95,7 +95,7 @@ func get_import_options(preset):
 			#tooltip = "The name of the animation to autoplay on scene load.",
 		},
 	]
-	
+
 	return options
 
 func import(src, target_path, import_options, r_platform_variants, r_gen_files):
@@ -104,7 +104,7 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 	target_path = target_path + "." + get_save_extension()
 	var post_script_path = import_options.post_script
 	var autoplay_name = import_options.autoplay_animation
-	
+
 	var file = File.new()
 	var error
 	if post_script_path != "":
@@ -112,13 +112,13 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 		if error != OK:
 			post_script_path = ""
 		file.close()
-	
+
 	error = file.open( json_path, File.READ )
 	if error != OK:
 		file.close()
 		print( str( ERRMSG_FILE_OPEN_STRF % ["JSON", json_path], ERRMSG_POSTCODE_STRF % error ))
 		return error
-	
+
 	var sheet = Sheet.new()
 	error = sheet.parse_json( file.get_as_text() )
 	file.close()
@@ -127,10 +127,10 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 		return error
 	if not sheet.is_animations_enabled():
 		print( WARNMSG_ANIMATION_EXPORT_STRF % json_path )
-	
+
 	if texture_path == "":
 		texture_path = json_path.get_basename() + ".png"
-	
+
 	if not file.file_exists( texture_path ):
 		print( ERRMSG_FILE_OPEN_STRF % ["texture", texture_path] )
 		return ERR_FILE_NOT_FOUND
@@ -138,7 +138,7 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 	if not typeof(texture) == TYPE_OBJECT or not texture is Texture:
 		print( ERRMSG_FILE_INVALID_STRF % [texture_path, "texture"] )
 		return ERR_INVALID_DATA
-	
+
 	## This code is only useful if someone wishes to manually edit the .scn file in the .import directory, which is not recommended.
 #	var scene
 #
@@ -147,16 +147,16 @@ func import(src, target_path, import_options, r_platform_variants, r_gen_files):
 #		assert( scene is PackedScene )
 #	else:
 	var packed_scene = PackedScene.new()
-	
+
 	var sheet2scene = SheetToScene.new()
 	error = sheet2scene.merge( sheet, texture, packed_scene, post_script_path, autoplay_name )
 	if error != OK:
 		print( str( ERRMSG_MERGE_PRETEXT_STRF % target_path, sheet2scene.get_error_message(), ERRMSG_POSTCODE_STRF % error ))
 		return error
-	
+
 	error = ResourceSaver.save( target_path, packed_scene )
 	if error != OK:
 		print( str( ERRMSG_SAVE_STRF % target_path, ERRMSG_POSTCODE_STRF % error ))
 		return ERR_INVALID_PARAMETER
-	
+
 	return OK

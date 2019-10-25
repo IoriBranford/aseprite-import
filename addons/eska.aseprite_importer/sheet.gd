@@ -24,7 +24,8 @@
 tool
 
 class Frame:
-	var rect
+	var position
+	var region_rect
 	var duration
 
 const FORMAT_HASH = 0
@@ -32,14 +33,19 @@ const FORMAT_ARRAY = 1
 
 var _loaded = false
 var _dict = {}
-
+var _filenameRegex = RegEx.new()
 var _format
 var _texture_filename
 var _texture_size
+var _layers = [{}]
+var _layer_indices = null
 var _frames = []
 var _animations = null
 
 var _error_message = "No error message available"
+
+func _init():
+	_filenameRegex.compile('(?<sprite>[\\w]+)( \\((?<layer>[\\w\\s]+)\\))?( (?<index>\\d+))?')
 
 func get_error_message():
 	return _error_message
@@ -64,10 +70,13 @@ func get_texture_filename():
 func get_texture_size():
 	return _texture_size
 
+func get_layers():
+	return _layers
+
 func get_frames():
 	return _frames
 
-func get_frame( frame_index ):
+func get_frame_layers( frame_index ):
 	return _frames[frame_index]
 
 func get_frame_count():
@@ -83,13 +92,13 @@ func get_animation_names():
 func get_animation( anim_name ):
 	var frames = []
 	for i in _animations[anim_name]:
-		frames.push_back( get_frame( i ))
+		frames.push_back( get_frame_layers( i ))
 	return frames
 
 func get_animation_length( anim_name ):
 	var length = 0
 	for frame_index in _animations[anim_name]:
-		length += get_frame( frame_index ).duration
+		length += get_frame_layers( frame_index )[0].duration
 	return length
 
 func get_animation_count():
@@ -145,6 +154,12 @@ func _parse_meta():
 	## \TODO meta.scale
 	if meta.has('frameTags'):
 		_animations = {}
+	if meta.has('layers'):
+		_layers = meta.layers
+		_layer_indices = {}
+		for i in range(0, _layers.size()):
+			var layer = _layers[i]
+			_layer_indices[layer.name] = i
 	return OK
 
 func _determine_format():
@@ -159,25 +174,12 @@ func _determine_format():
 	return ERR_INVALID_DATA
 
 func _parse_frames_dict( frames ):
-	var regex = RegEx.new()
-	regex.compile('(?<sprite>[\\w]+)( \\((?<layer>[\\w\\s]+)\\))?( (?<index>\\d+))?')
-	var regexResults = {}
 	for key in frames:
-		var result = regex.search(key)
-		regexResults[key] = result
-
-	var ordered_frames = []
-	ordered_frames.resize( frames.size() )
-	for key in regexResults:
-		var result = regexResults[key]
-		var index = result.get_string('index')
-		index = index.to_int() if index.is_valid_integer() else 0
-		ordered_frames[index] = key
-		
-	for i in range(ordered_frames.size()):
-		frames[ordered_frames[i]].filename = ordered_frames[i]
-		ordered_frames[i] = frames[ordered_frames[i]]
-	return _parse_frames_array( ordered_frames )
+		frames[key]['filename'] = key
+	var error = _parse_frames_array( frames.values() )
+	if error != OK:
+		return error
+	return OK
 
 func _parse_frames_array( array ):
 	var error
@@ -191,11 +193,34 @@ func _parse_frames_array( array ):
 	return OK
 
 func _parse_frame( sheet_frame ):
-	var frame = Frame.new()
+	var regex_result = _filenameRegex.search(sheet_frame.filename)
+	var layer = regex_result.get_string('layer')
+	var index = regex_result.get_string('index')
+	if layer != '' and _layer_indices:
+		layer = _layer_indices.get(layer)
+	else:
+		layer = 0
+	index = index.to_int() if index.is_valid_integer() else 0
+
+	if index >= _frames.size():
+		_frames.resize(index+1)
+
+	var framelayers = _frames[index]
+	if not framelayers:
+		framelayers = []
+		for i in range(0, _layers.size()):
+			var f = Frame.new()
+			f.position = Vector2()
+			f.region_rect = Rect2()
+			f.duration = sheet_frame.duration
+			framelayers.append(f)
+		_frames[index] = framelayers
+
+	var frame = framelayers[layer]
 	var rect = sheet_frame.frame
-	frame.rect = Rect2( rect.x, rect.y, rect.w, rect.h )
-	frame.duration = sheet_frame.duration
-	_frames.append( frame )
+	var spriteSourceSize = sheet_frame.spriteSourceSize
+	frame.position = Vector2(spriteSourceSize.x, spriteSourceSize.y)
+	frame.region_rect = Rect2( rect.x, rect.y, rect.w, rect.h )
 	return OK
 
 const DIRECTION_FORWARD = 'forward'
@@ -229,33 +254,37 @@ func _validate_base():
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-	
+
 	if _dict.frames.size() <= 0:
 		_error_message = ERRMSG_MISSING_VALUE_STRF % 'frames'
 		return ERR_INVALID_DATA
-	
+
 	errmsg = _get_value_error( _dict, 'meta', TYPE_DICTIONARY )
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-	
+
 	errmsg = _get_value_error( _dict.meta, 'image', TYPE_STRING )
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-	
+
 	errmsg = _get_value_error( _dict.meta, 'size', TYPE_DICTIONARY )
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-	
+
 	if make_vector2( _dict.meta.size ) == null:
 		_error_message = ERRMSG_INVALID_VALUE_STRF % 'meta.size'
 		return ERR_INVALID_DATA
 	return OK
 
 func _validate_frame( frame ):
-	var errmsg = _get_value_error( frame, 'frame', TYPE_DICTIONARY )
+	var errmsg = _get_value_error( frame, 'filename', TYPE_STRING )
+	if errmsg:
+		_error_message = errmsg
+		return ERR_INVALID_DATA
+	errmsg = _get_value_error( frame, 'frame', TYPE_DICTIONARY )
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
@@ -273,12 +302,12 @@ func _validate_animation( anim ):
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-	
+
 	errmsg = _get_value_error( anim, 'direction', TYPE_STRING )
 	if errmsg:
 		_error_message = errmsg
 		return ERR_INVALID_DATA
-	
+
 	var direction_is_valid = false
 	for direction in [DIRECTION_FORWARD, DIRECTION_REVERSE, DIRECTION_PINGPONG]:
 		if anim.direction == direction:
@@ -287,7 +316,7 @@ func _validate_animation( anim ):
 	if not direction_is_valid:
 		_error_message = ERRMSG_INVALID_VALUE_STRF % 'direction'
 		return ERR_INVALID_DATA
-	
+
 	errmsg = _get_value_error( anim, 'from', TYPE_REAL )
 	if errmsg:
 		_error_message = errmsg

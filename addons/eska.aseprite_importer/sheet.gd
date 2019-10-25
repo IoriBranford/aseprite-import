@@ -159,22 +159,20 @@ func _determine_format():
 	return ERR_INVALID_DATA
 
 func _parse_frames_dict( frames ):
-	if frames.size() == 1:
-		var old_name = frames.keys()[0]
-		var numbered_name = old_name.get_basename() + ' 0.' + old_name.get_extension()
-		frames[numbered_name] = frames[old_name]
-		frames.erase( old_name )
-		
+	var regex = RegEx.new()
+	regex.compile('(?<sprite>[\\w]+)( \\((?<layer>[\\w\\s]+)\\))?( (?<index>\\d+))?')
+	var regexResults = {}
+	for key in frames:
+		var result = regex.search(key)
+		regexResults[key] = result
+
 	var ordered_frames = []
 	ordered_frames.resize( frames.size() )
-	for key in frames:
-		# `file 0.ase` => `file 0` => `0`
-		var index = key.get_basename().split(' ')
-		index = index[index.size()-1]
-		if not index.is_valid_integer():
-			_error_message = ERRMSG_INVALID_KEY_STRF % key
-			return ERR_INVALID_DATA
-		ordered_frames[index.to_int()] = key
+	for key in regexResults:
+		var result = regexResults[key]
+		var index = result.get_string('index')
+		index = index.to_int() if index.is_valid_integer() else 0
+		ordered_frames[index] = key
 		
 	for i in range(ordered_frames.size()):
 		frames[ordered_frames[i]].filename = ordered_frames[i]

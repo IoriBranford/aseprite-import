@@ -23,10 +23,10 @@
 
 tool
 
-class Frame:
-	var position
-	var region_rect
-	var duration
+class Cel:
+	var position = Vector2()
+	var region_rect = Rect2()
+	var duration = 0
 
 const FORMAT_HASH = 0
 const FORMAT_ARRAY = 1
@@ -37,8 +37,7 @@ var _filenameRegex = RegEx.new()
 var _format
 var _texture_filename
 var _texture_size
-var _layers = [{}]
-var _layer_indices = null
+var _layers = []
 var _frames = []
 var _animations = null
 var _anchor = Vector2()
@@ -80,7 +79,7 @@ func get_layers():
 func get_frames():
 	return _frames
 
-func get_frame_layers( frame_index ):
+func get_frame( frame_index ):
 	return _frames[frame_index]
 
 func get_frame_count():
@@ -96,13 +95,13 @@ func get_animation_names():
 func get_animation( anim_name ):
 	var frames = []
 	for i in _animations[anim_name]:
-		frames.push_back( get_frame_layers( i ))
+		frames.push_back( get_frame( i ))
 	return frames
 
 func get_animation_length( anim_name ):
 	var length = 0
 	for frame_index in _animations[anim_name]:
-		length += get_frame_layers( frame_index )[0].duration
+		length += get_frame( frame_index )[0].duration
 	return length
 
 func get_animation_count():
@@ -140,6 +139,8 @@ func _initialize():
 		error = _parse_animations()
 		if error != OK:
 			return error
+	for i in _frames.size():
+		_grow_frame(i)
 	_loaded = true
 	return OK
 
@@ -158,12 +159,6 @@ func _parse_meta():
 	## \TODO meta.scale
 	if meta.has('frameTags'):
 		_animations = {}
-	if meta.has('layers'):
-		_layers = meta.layers
-		_layer_indices = {}
-		for i in range(0, _layers.size()):
-			var layer = _layers[i]
-			_layer_indices[layer.name] = i
 	return OK
 
 func _determine_format():
@@ -184,7 +179,7 @@ func _parse_frames_dict( frames ):
 	if error != OK:
 		return error
 	return OK
-
+	
 func _parse_frames_array( array ):
 	var error
 	for frame in array:
@@ -196,38 +191,47 @@ func _parse_frames_array( array ):
 			return error
 	return OK
 
+func _grow_frames(newsize):
+	while _frames.size() < newsize:
+		var frame = []
+		while frame.size() < _layers.size():
+			frame.append(Cel.new())
+		_frames.append(frame)
+
+func _grow_frame(i):
+	var frame = _frames[i]
+	while frame.size() < _layers.size():
+		frame.append(Cel.new())
+
 func _parse_frame( sheet_frame ):
 	var regex_result = _filenameRegex.search(sheet_frame.filename)
-	var layer = regex_result.get_string('layer')
 	var index = regex_result.get_string('index')
-	if layer != '' and _layer_indices:
-		layer = _layer_indices.get(layer)
-	else:
-		layer = 0
+	var layerindex = 0
+	var layername = regex_result.get_string('layer')
+	if layername != '':
+		if _layers.size() == 0 or layername != _layers.back().name:
+			if _dict.meta.has('layers'):
+				_layers.append(_dict.meta.layers[_layers.size()])
+			else:
+				_layers.append({ 'name' : layername })
+		layerindex = _layers.size()-1
+	elif _layers.size() == 0:
+		_layers.append({})
 	index = index.to_int() if index.is_valid_integer() else 0
 
-	if index >= _frames.size():
-		_frames.resize(index+1)
-
-	var framelayers = _frames[index]
-	if not framelayers:
-		framelayers = []
-		for i in range(0, _layers.size()):
-			var f = Frame.new()
-			f.position = Vector2()
-			f.region_rect = Rect2()
-			f.duration = sheet_frame.duration
-			framelayers.append(f)
-		_frames[index] = framelayers
-
-	var frame = framelayers[layer]
+	_grow_frames(index + 1)
+	_grow_frame(index)
+	
+	var frame = _frames[index]
+	var cel = frame[layerindex]
 	var rect = sheet_frame.frame
 	var spriteSourceSize = sheet_frame.spriteSourceSize
-	frame.position = Vector2(spriteSourceSize.x, spriteSourceSize.y)
-	frame.region_rect = Rect2( rect.x, rect.y, rect.w, rect.h )
+	cel.position = Vector2(spriteSourceSize.x, spriteSourceSize.y)
+	cel.region_rect = Rect2( rect.x, rect.y, rect.w, rect.h )
 	var sourceSize = sheet_frame.sourceSize
 	var anchor_offset = Vector2(sourceSize.w*_anchor.x, sourceSize.h*_anchor.y)
-	frame.position -= anchor_offset
+	cel.position -= anchor_offset
+	cel.duration = sheet_frame.duration
 	return OK
 
 const DIRECTION_FORWARD = 'forward'
@@ -236,6 +240,7 @@ const DIRECTION_PINGPONG = 'pingpong'
 
 func _parse_animations():
 	var error
+	var maxframe = 0
 	for animation in _dict.meta.frameTags:
 		error = _validate_animation( animation )
 		if error != OK:
@@ -251,6 +256,9 @@ func _parse_animations():
 		if animation.direction == DIRECTION_REVERSE:
 			sequence.push_front( animation.to )
 			sequence.push_back( animation.from )
+		
+		maxframe = max(maxframe, max(animation.from, animation.to))
+	_grow_frames(maxframe + 1)
 	return OK
 
 ## \name Validation

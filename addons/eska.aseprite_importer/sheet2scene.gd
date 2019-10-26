@@ -54,11 +54,11 @@ func merge( sheet, texture, packed_scene, post_script_path, autoplay_name, aggre
 	assert( typeof(texture) == TYPE_OBJECT and texture is Texture )
 	assert( typeof(packed_scene) == TYPE_OBJECT and packed_scene is PackedScene )
 	assert( typeof(post_script_path) == TYPE_STRING)
-
+	
 	var scene = null
 	var sprites = []
 	var player = null
-
+	
 	if packed_scene.can_instance():
 		scene = packed_scene.instance()
 		for child in scene.get_children():
@@ -71,9 +71,9 @@ func merge( sheet, texture, packed_scene, post_script_path, autoplay_name, aggre
 	else:
 		scene = Node2D.new()
 		scene.set_meta("_ase_imported", true)
-
+	
 	var layers = sheet.get_layers()
-	var frame0layers = sheet.get_frame_layers( 0 )
+	var frame0 = sheet.get_frame( 0 )
 
 	var layer_range = range(0, layers.size())
 	if sprites.empty():
@@ -87,17 +87,17 @@ func merge( sheet, texture, packed_scene, post_script_path, autoplay_name, aggre
 			scene.add_child( sprite, true )
 			sprite.set_centered(false)
 			sprites.append(sprite)
-
+	
 	for i in layer_range:
 		var sprite = sprites[i]
 		sprite.set_owner( scene )
-
+		
 		sprite.set_texture( texture )
-		var frame0layer = frame0layers[i]
-		sprite.set_region_rect( frame0layer.region_rect )
+		var cel = frame0[i]
+		sprite.set_region_rect( cel.region_rect )
 		sprite.set_region( true )
-		sprite.set_position( frame0layer.position )
-
+		sprite.set_position( cel.position )
+	
 	var error
 	if sheet.is_animations_enabled():
 		if !player:
@@ -105,7 +105,7 @@ func merge( sheet, texture, packed_scene, post_script_path, autoplay_name, aggre
 			player.set_meta("_ase_imported", true)
 			scene.add_child(player, true)
 		player.set_owner(scene)
-
+		
 		for i in layer_range:
 			var sprite = sprites[i]
 			var track_path_sprite = player.get_node( player.get_root() ).get_path_to( sprite )
@@ -117,7 +117,7 @@ func merge( sheet, texture, packed_scene, post_script_path, autoplay_name, aggre
 			player.set_autoplay( autoplay_name )
 		elif autoplay_name != "":
 			print("Sprite sheet has no animation ", autoplay_name, " to autoplay.")
-
+	
 	if post_script_path != "":
 		var post_script = load(post_script_path)
 		if !post_script is GDScript:
@@ -128,7 +128,7 @@ func merge( sheet, texture, packed_scene, post_script_path, autoplay_name, aggre
 				print(post_script_path, " has no method \"post_import\"")
 			else:
 				scene = post_script.post_import(scene)
-
+	
 	error = packed_scene.pack( scene )
 	_cleanup( scene )
 	return error
@@ -142,17 +142,17 @@ func _merge_animations( player, layer, track_path_sprite, sheet, aggressive ):
 			anim = Animation.new()
 			anim.set_loop( true )
 			player.add_animation( anim_name, anim )
-
+		
 		var new_length = sheet.get_animation_length( anim_name ) / 1000
 		var old_length = anim.get_length()
-
+		
 		var sequence = sheet.get_animation( anim_name )
-
+		
 		var error = _merge_animation_track( sequence, anim, track_path_sprite, 'region_rect', layer )
 		if error != OK: return error
 		error = _merge_animation_track( sequence, anim, track_path_sprite, 'position', layer )
 		if error != OK: return error
-
+		
 		var track_path_rect = str( track_path_sprite, ':', 'region_rect' )
 		var track_path_pos = str( track_path_sprite, ':', 'position' )
 		for track_index in range( anim.get_track_count() ):
@@ -174,10 +174,10 @@ func _merge_animation_track( sequence, anim, track_path_sprite, track_variable, 
 		if anim.track_get_type( track ) != Animation.TYPE_VALUE:
 			_error_message = ERRMSG_INCOMPATIBLE_STRF % str( "Differing track type in track ", track_path )
 			return ERR_INVALID_PARAMETER
-
+	
 	while anim.track_get_key_count( track ):
 		anim.track_remove_key( track, 0 )
-
+	
 	var time = 0
 	for framelayers in sequence:
 		var frame = framelayers[layer]
@@ -185,6 +185,6 @@ func _merge_animation_track( sequence, anim, track_path_sprite, track_variable, 
 		if property != null:
 			anim.track_insert_key( track, time/1000.0, property )
 		time += frame.duration
-
+	
 	anim.track_set_imported( track, true )
 	return OK

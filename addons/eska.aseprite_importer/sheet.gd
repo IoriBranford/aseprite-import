@@ -199,6 +199,11 @@ func _grow_frames(newsize):
 		_frames.append(frame)
 
 func _grow_frame(i):
+	if i < 0:
+		return
+	if i >= _frames.size():
+		_grow_frames(i+1)
+		return
 	var frame = _frames[i]
 	while frame.size() < _layers.size():
 		frame.append(Cel.new())

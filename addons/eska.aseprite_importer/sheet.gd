@@ -140,7 +140,14 @@ func _initialize():
 		if error != OK:
 			return error
 	for i in _frames.size():
-		_grow_frame(i)
+		var duration = 0
+		for cel in _frames[i]:
+			if cel.duration > 0:
+				duration = cel.duration
+				for cel in _frames[i]:
+					cel.duration = duration
+				break
+		_grow_frame(i, duration)
 	_loaded = true
 	return OK
 
@@ -198,7 +205,7 @@ func _grow_frames(newsize):
 			frame.append(Cel.new())
 		_frames.append(frame)
 
-func _grow_frame(i):
+func _grow_frame(i, duration):
 	if i < 0:
 		return
 	if i >= _frames.size():
@@ -207,6 +214,7 @@ func _grow_frame(i):
 	var frame = _frames[i]
 	while frame.size() < _layers.size():
 		frame.append(Cel.new())
+		frame.back().duration = duration
 
 func _parse_frame( sheet_frame ):
 	var regex_result = _filenameRegex.search(sheet_frame.filename)
@@ -225,7 +233,7 @@ func _parse_frame( sheet_frame ):
 	index = index.to_int() if index.is_valid_integer() else 0
 
 	_grow_frames(index + 1)
-	_grow_frame(index)
+	_grow_frame(index, sheet_frame.duration)
 	
 	var frame = _frames[index]
 	var cel = frame[layerindex]
